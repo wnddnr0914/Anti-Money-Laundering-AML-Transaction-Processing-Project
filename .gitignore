@@ -6,8 +6,8 @@ __pycache__/
 # STR 보고서 실행 결과
 outputs/
 
-#vs code 실행
-.vscode//str_report/str_api_config.py
+# VS Code
+.vscode/
 
 # API 키
-/str_report/str_api_config.py
+str_api_config.py
