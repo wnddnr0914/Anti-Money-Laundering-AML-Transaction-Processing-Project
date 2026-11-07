@@ -1,0 +1,10 @@
+# Python 캐시
+__pycache__/
+*.pyc
+*.pyo
+
+# STR 보고서 실행 결과
+outputs/
+
+#vs code 실행
+.vscode/
