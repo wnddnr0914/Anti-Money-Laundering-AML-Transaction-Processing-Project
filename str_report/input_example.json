@@ -1,0 +1,69 @@
+{
+  "case_id": "demo_fanin_001",
+  "data_source": "synthetic_demo",
+  "target_tx_id": "TX_99201",
+  "analysis_start": "2026-10-01T09:00:00",
+  "analysis_end": "2026-10-01T09:10:00",
+  "anomaly_score": 0.94,
+  "score_source": "mock",
+  "transactions": [
+    {
+      "tx_id": "TX_001",
+      "sender": "BANK1:A",
+      "receiver": "BANK1:D",
+      "timestamp": "2026-10-01T09:00:00",
+      "amount_paid": "9900000",
+      "payment_currency": "KRW",
+      "amount_received": "9900000",
+      "receiving_currency": "KRW"
+    },
+    {
+      "tx_id": "TX_002",
+      "sender": "BANK1:B",
+      "receiver": "BANK1:D",
+      "timestamp": "2026-10-01T09:03:00",
+      "amount_paid": "9900000",
+      "payment_currency": "KRW",
+      "amount_received": "9900000",
+      "receiving_currency": "KRW"
+    },
+    {
+      "tx_id": "TX_003",
+      "sender": "BANK2:C",
+      "receiver": "BANK1:D",
+      "timestamp": "2026-10-01T09:09:00",
+      "amount_paid": "9900000",
+      "payment_currency": "KRW",
+      "amount_received": "9900000",
+      "receiving_currency": "KRW"
+    },
+    {
+      "tx_id": "TX_99201",
+      "sender": "BANK1:D",
+      "receiver": "BANK3:E",
+      "timestamp": "2026-10-01T09:10:00",
+      "amount_paid": "29000000",
+      "payment_currency": "KRW",
+      "amount_received": "29000000",
+      "receiving_currency": "KRW"
+    }
+  ],
+  "xai": {
+    "target_tx_id": "TX_99201",
+    "source": "mock",
+    "important_edges": [
+      {
+        "tx_id": "TX_001",
+        "importance": 0.89
+      },
+      {
+        "tx_id": "TX_002",
+        "importance": 0.91
+      },
+      {
+        "tx_id": "TX_003",
+        "importance": 0.87
+      }
+    ]
+  }
+}
