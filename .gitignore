@@ -7,4 +7,7 @@ __pycache__/
 outputs/
 
 #vs code 실행
-.vscode/
+.vscode//str_report/str_api_config.py
+
+# API 키
+/str_report/str_api_config.py
