@@ -1,69 +1,90 @@
 {
-  "case_id": "demo_fanin_001",
-  "data_source": "synthetic_demo",
-  "target_tx_id": "TX_99201",
-  "analysis_start": "2026-10-01T09:00:00",
-  "analysis_end": "2026-10-01T09:10:00",
-  "anomaly_score": 0.94,
-  "score_source": "mock",
-  "transactions": [
-    {
-      "tx_id": "TX_001",
-      "sender": "BANK1:A",
-      "receiver": "BANK1:D",
-      "timestamp": "2026-10-01T09:00:00",
-      "amount_paid": "9900000",
-      "payment_currency": "KRW",
-      "amount_received": "9900000",
-      "receiving_currency": "KRW"
-    },
-    {
-      "tx_id": "TX_002",
-      "sender": "BANK1:B",
-      "receiver": "BANK1:D",
-      "timestamp": "2026-10-01T09:03:00",
-      "amount_paid": "9900000",
-      "payment_currency": "KRW",
-      "amount_received": "9900000",
-      "receiving_currency": "KRW"
-    },
-    {
-      "tx_id": "TX_003",
-      "sender": "BANK2:C",
-      "receiver": "BANK1:D",
-      "timestamp": "2026-10-01T09:09:00",
-      "amount_paid": "9900000",
-      "payment_currency": "KRW",
-      "amount_received": "9900000",
-      "receiving_currency": "KRW"
-    },
-    {
-      "tx_id": "TX_99201",
-      "sender": "BANK1:D",
-      "receiver": "BANK3:E",
-      "timestamp": "2026-10-01T09:10:00",
-      "amount_paid": "29000000",
-      "payment_currency": "KRW",
-      "amount_received": "29000000",
-      "receiving_currency": "KRW"
-    }
-  ],
-  "xai": {
-    "target_tx_id": "TX_99201",
-    "source": "mock",
-    "important_edges": [
+  "target_transaction_id": "TX000003",
+  "target_transaction": {
+    "transaction_id": "TX000003",
+    "timestamp": "2022-11-01T10:07:00Z",
+    "sender_account": "B",
+    "receiver_account": "D",
+    "amount": 2800,
+    "currency": "USD"
+  },
+  "fraud_detection": {
+    "model_version": "fraudgt-mock-v1",
+    "fraud_score": 0.81,
+    "is_alert": true
+  },
+  "subgraph": {
+    "hops": 2,
+    "lookback_days": 7,
+    "nodes": [
       {
-        "tx_id": "TX_001",
-        "importance": 0.89
+        "id": "A"
       },
       {
-        "tx_id": "TX_002",
-        "importance": 0.91
+        "id": "B"
       },
       {
-        "tx_id": "TX_003",
-        "importance": 0.87
+        "id": "C"
+      },
+      {
+        "id": "D"
       }
+    ],
+    "edges": [
+      {
+        "id": "TX000001",
+        "source": "A",
+        "target": "B",
+        "amount": 1000,
+        "currency": "USD",
+        "timestamp": "2022-11-01T10:01:00Z",
+        "is_target": false
+      },
+      {
+        "id": "TX000002",
+        "source": "C",
+        "target": "B",
+        "amount": 2000,
+        "currency": "USD",
+        "timestamp": "2022-11-01T10:03:00Z",
+        "is_target": false
+      },
+      {
+        "id": "TX000003",
+        "source": "B",
+        "target": "D",
+        "amount": 2800,
+        "currency": "USD",
+        "timestamp": "2022-11-01T10:07:00Z",
+        "is_target": true
+      }
+    ]
+  },
+  "explanation": {
+    "explanation_id": "EXP000003",
+    "status": "completed",
+    "method": "GNNExplainer",
+    "model_version": "fraudgt-mock-v1",
+    "edge_importance": [
+      {
+        "transaction_id": "TX000001",
+        "importance": 0.75
+      },
+      {
+        "transaction_id": "TX000002",
+        "importance": 0.86
+      }
+    ]
+  },
+  "typology_analysis": {
+    "predicted_type": "Layering",
+    "confidence": 0.72,
+    "verification_status": "unverified",
+    "model_version": "typology-mock-v1",
+    "related_transaction_ids": [
+      "TX000001",
+      "TX000002",
+      "TX000003"
     ]
   }
 }
