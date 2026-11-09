@@ -11,3 +11,5 @@ outputs/
 
 # API 키
 str_api_config.py
+# Project virtual environment
+.venv/
