@@ -14,8 +14,9 @@ explanation 및 typology_analysis는 생략하거나 null로 전달할 수 있�
 amount/currency는 API에 기재된 거래 금액/통화로 집계한다. 지급액=수취액을 가정하지 않는다.
 lookback_days로 분석 기간이나 전체 거래 포함 여부를 추정하지 않는다.
 
-Python 3.12에서 검증. 대시보드와 같은 Python 환경에 설치:
-python -m pip install langgraph==1.2.16 langchain==1.4.6 langchain-core==1.6.12 langchain-openai==1.7.2 openai==3.35.1 pydantic==2.14.1
+Python 3.12 환경 사용. 프로젝트 최상위 폴더에서 설치:
+python -m pip install -r str_report/requirements.txt
+str_report 폴더 안에서는: python -m pip install -r requirements.txt
 함수는 버튼 클릭 시 호출하고 반환값을 화면 세션에 보관한다.
 """
 import argparse
@@ -33,7 +34,7 @@ from typing import Annotated, Callable, Literal, TypedDict
 from uuid import uuid4
 
 from langgraph.graph import END, START, StateGraph
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, ValidationError, model_validator
 
 ROOT = Path(__file__).resolve().parent
 DEFAULT_MODEL = "gpt-5.4-mini"
@@ -616,8 +617,21 @@ def main():
     try:
         payload = json.loads(args.input.read_text(encoding="utf-8-sig"))
         result = generate_str_report(payload, model_name=args.model, max_rewrites=args.max_rewrites)
-    except Exception:
-        parser.error("입력 JSON, 설치 패키지, str_api_config.py의 OpenAI API 키와 모델 설정을 확인하세요.")
+    except FileNotFoundError:
+        parser.error("입력 JSON 파일을 찾을 수 없습니다. --input 경로를 확인하세요.")
+    except json.JSONDecodeError as exc:
+        parser.error(f"입력 JSON 문법 오류: {exc.lineno}행 {exc.colno}열을 확인하세요.")
+    except ModuleNotFoundError as exc:
+        package = {"langchain_openai": "langchain-openai"}.get(exc.name, exc.name)
+        parser.error(f"현재 Python 환경에 필요한 패키지가 없습니다: {package}. "
+                     "프로젝트 최상위 폴더에서 python -m pip install -r str_report/requirements.txt 를 실행하세요.")
+    except ValidationError as exc:
+        fields = [".".join(str(part) for part in item["loc"]) or "입력 전체"
+                  for item in exc.errors(include_input=False, include_context=False, include_url=False)]
+        parser.error("입력 또는 모델 설정의 자료형·연결 검증 실패. 확인할 항목: " + ", ".join(fields[:8]))
+    except Exception as exc:
+        # 원본 예외 메시지에는 키·요청 정보가 포함될 수 있으므로 종류만 표시한다.
+        parser.error(f"초기화 실패({type(exc).__name__}). str_api_config.py의 API 키 설정과 모델 설정을 확인하세요.")
     run_dir = args.output / uuid4().hex[:12]
     run_dir.mkdir(parents=True)
     (run_dir / "result.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
