@@ -1,0 +1,10 @@
+# STR report generator - Python 3.12.x
+# Install: python -m pip install -r str_report/requirements.txt
+# Dashboard/GNN dependencies are managed by their respective modules.
+langgraph==1.2.16
+langchain-openai==1.7.2
+pydantic==2.14.1
+
+# Pin the SDK versions used by this report module.
+langchain-core==1.6.12
+openai==3.35.1
