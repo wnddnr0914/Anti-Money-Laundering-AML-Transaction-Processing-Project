@@ -1,0 +1,7 @@
+# 로컬 DB/대용량 원본/매핑은 이 폴더에 저장하고 Git에 올리지 않는다.
+data/
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+__pycache__/
