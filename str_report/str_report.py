@@ -6,9 +6,9 @@ API 키: 같은 폴더의 str_api_config.py 또는 OPENAI_API_KEY 환경변수.
 팀 공통 입력: target_transaction / fraud_detection / subgraph / explanation /
 typology_analysis. input_example.json은 이 형식의 예시이며 실제 API 응답 딕셔너리도 받는다.
 키는 기존 str_api_config.py 또는 환경변수에 설정한다. 실제 키는 저장소에 올리지 않는다.
-보고서 양식은 REPORT_TEMPLATE 상수에 내장되어 별도 Markdown 파일이 필요 없다.
+검증을 통과하면 브라우저로 열 수 있는 독립 HTML 문서를 생성한다.
 대시보드: result = generate_str_report(payload)
-출력: result['final_report_md'], result['errors'], result['warnings'].
+출력: result['final_report_html'], result['errors'], result['warnings'].
 explanation 및 typology_analysis는 생략하거나 null로 전달할 수 있다.
 완료되지 않은 XAI의 중요도는 사용하지 않으며 경고와 함께 거래 기반 초안을 생성한다.
 amount/currency는 API에 기재된 거래 금액/통화로 집계한다. 지급액=수취액을 가정하지 않는다.
@@ -20,6 +20,7 @@ str_report 폴더 안에서는: python -m pip install -r requirements.txt
 함수는 버튼 클릭 시 호출하고 반환값을 화면 세션에 보관한다.
 """
 import argparse
+import html
 import importlib
 import json
 import os
@@ -431,7 +432,38 @@ def table(headers, rows):
                      + ["| " + " | ".join(escape(c) for c in row) + " |" for row in rows])
 
 
-def render_report(data, facts, draft):
+def html_text(value):
+    return html.escape(str(value), quote=True)
+
+
+def html_table(headers, rows):
+    heads = "".join(f'<th scope="col">{html_text(h)}</th>' for h in headers)
+    body = "".join("<tr>" + "".join(f"<td>{html_text(v)}</td>" for v in row) + "</tr>" for row in rows)
+    return f'<div class="table-wrap"><table><thead><tr>{heads}</tr></thead><tbody>{body}</tbody></table></div>'
+
+
+REPORT_CSS = """
+*{box-sizing:border-box}body{margin:0;background:#edf2f4;color:#182f38;font:16px/1.6 system-ui,'Malgun Gothic',sans-serif}
+main{max-width:960px;margin:32px auto;background:white;padding:clamp(20px,5vw,54px);border-top:6px solid #11665e}
+h1{font-size:clamp(26px,4vw,39px);line-height:1.22;margin:8px 0 18px;letter-spacing:-.045em}
+h2{font-size:21px;border-bottom:1px solid #b8ccca;padding-bottom:7px;margin:32px 0 12px}
+h3{font-size:16px;margin:18px 0 4px}p{margin:4px 0 9px}main{overflow-wrap:anywhere}
+.meta,small{color:#466269}.meta{margin:0;font-weight:650}
+dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+dl div{background:#f0f6f5;padding:12px 14px;border-left:3px solid #3b8b80}
+dt,small,th{font-size:14px}dd{margin:3px 0 0;font-size:18px;font-weight:650}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px;border-bottom:1px solid #d9e3e4;vertical-align:top}
+th{background:#f2f6f6;color:#34595a}.table-wrap{overflow-x:auto}
+ul{padding-left:22px}li{margin:5px 0}.observation{border-left:2px solid #b8ccca;padding-left:12px;margin:10px 0}
+@media(max-width:600px){main{margin:0}th,td{padding:5px}.table-wrap table{min-width:400px}}
+@page{size:A4;margin:15mm}@media print{body{background:white;font-size:10pt}main{margin:0;padding:0;max-width:none}
+h2,h3{break-after:avoid}tr,.observation{break-inside:avoid}.table-wrap{overflow:visible}table{font-size:9pt}thead{display:table-header-group}}
+"""
+
+
+def render_report(data, facts, draft, *, as_html=False):
+    grid = html_table if as_html else table
     graph, detection, xai, typology = data.subgraph, data.fraud_detection, data.explanation, data.typology_analysis
     observed_start = min(t.timestamp for t in graph.edges)
     observed_end = max(t.timestamp for t in graph.edges)
@@ -450,30 +482,38 @@ def render_report(data, facts, draft):
     ]
     if graph.analysis_start is not None:
         overview_rows.append(["명시된 조회 기간", f"{graph.analysis_start.isoformat(sep=' ')} ~ {graph.analysis_end.isoformat(sep=' ')}"])
-    overview = table(["항목", "내용"], overview_rows)
-    overview += "\n\n입력 범위 및 처리 안내:\n" + "\n".join("- " + escape(w) for w in input_warnings(data))
+    warnings = input_warnings(data)
     fact_rows = [[f["label"], f["display"], ", ".join(f["evidence_ids"]) or "제공 범위 내 집계"]
                  for key, f in facts.items() if key.startswith("incoming_") or key == "gap_seconds"]
     paragraphs = []
     labels = {"observation": "관찰 사실", "review_reason": "추가 검토 사유"}
     for stmt in draft.statements:
-        expanded = TOKEN.sub(lambda m: facts[m[1]]["display"], stmt.text)
-        paragraphs.append(f"**{labels[stmt.kind]}**\n\n" + escape(expanded)
-                          + "\n\n근거 거래: " + ", ".join(escape(i) for i in stmt.evidence_ids))
+        def expand(match):
+            fact = facts[match[1]]
+            suffix = match[2] or ""
+            return fact["display"] + ("" if suffix.strip() == fact["unit"] else suffix)
+
+        expanded = re.sub(TOKEN.pattern + r"([ ]*(?:건|개))?", expand, stmt.text)
+        if as_html:
+            paragraphs.append(f'<div class="observation"><h3>{labels[stmt.kind]}</h3><p>{html_text(expanded)}</p>'
+                              f'<small>근거 거래 · {html_text(", ".join(stmt.evidence_ids))}</small></div>')
+        else:
+            paragraphs.append(f"**{labels[stmt.kind]}**\n\n" + escape(expanded)
+                              + "\n\n근거 거래: " + ", ".join(escape(i) for i in stmt.evidence_ids))
     # 모델 수치·검증 상태는 LLM의 선택/누락에 의존하지 않고 검증된 입력에서 직접 표시한다.
     if xai and xai.status == "completed":
         origin = "예시 XAI 결과(Mock)" if result_source(xai.model_version) == "mock" else "제공된 XAI 결과"
-        xai_text = "**모델 설명 근거**\n\n" + escape(
-            f"{origin} / 방법: {xai.method} / 설명 ID: {xai.explanation_id} / 모델 버전: {xai.model_version}")
+        meta = f"{origin} / 방법: {xai.method} / 설명 ID: {xai.explanation_id} / 모델 버전: {xai.model_version}"
+        xai_text = ("<h3>모델 설명 근거</h3><p>" + html_text(meta) + "</p>") if as_html else "**모델 설명 근거**\n\n" + escape(meta)
         if xai.edge_importance:
-            xai_text += "\n\n" + table(["거래 ID", "중요도"], [
+            xai_text += "\n\n" + grid(["거래 ID", "중요도"], [
                 [e.transaction_id, e.importance] for e in xai.edge_importance])
             xai_text += "\n\n중요도는 제공된 모델 설명 값이며, 범죄 확률이나 연결 제거에 따른 점수 변화가 아니다."
         else:
             xai_text += "\n\n완료된 분석에 제공된 중요 연결이 없다."
         paragraphs.append(xai_text)
     if typology:
-        paragraphs.append("**유형 분석 참고 정보**\n\n" + table(["항목", "제공된 값"], [
+        paragraphs.append(("<h3>유형 분석 참고 정보</h3>" if as_html else "**유형 분석 참고 정보**\n\n") + grid(["항목", "제공된 값"], [
             ["후보 유형", typology.predicted_type],
             ["모듈 신뢰도 값", typology.confidence],
             ["검증 상태", typology.verification_status],
@@ -481,12 +521,34 @@ def render_report(data, facts, draft):
             ["출처", "예시(Mock)" if result_source(typology.model_version) == "mock" else "제공된 유형 분석 결과"],
             ["관련 거래", ", ".join(typology.related_transaction_ids)]])
             + "\n\n유형 분석 모듈이 제공한 후보 정보와 검증 상태를 그대로 표시하였다. 이 보고서가 해당 유형을 독립적으로 검증한 것은 아니다.")
-    evidence = table(["거래 ID", "송신", "수신", "시각", "거래 금액·통화", "대상 여부"], [
+    evidence = grid(["거래 ID", "송신", "수신", "시각", "거래 금액·통화", "대상 여부"], [
         [t.id, t.source, t.target, t.timestamp.isoformat(sep=" "),
          f"{display(t.amount)} {t.currency}", "대상" if t.is_target else "관련"]
         for t in sorted(graph.edges, key=lambda t: (t.timestamp, t.id))])
+    facts_table = grid(["관찰 항목", "계산 결과", "근거 거래"], fact_rows)
+    if as_html:
+        summary_keys = {"송신 → 수신", "대상 거래 금액", "GNN 의심 점수"}
+        cards = "".join(f"<div><dt>{html_text(k)}</dt><dd>{html_text(v)}</dd></div>"
+                        for k, v in overview_rows if k in summary_keys)
+        details = html_table(["항목", "내용"], [(k, v) for k, v in overview_rows if k not in summary_keys and k != "대상 거래"])
+        warning_list = "".join(f"<li>{html_text(w)}</li>" for w in warnings)
+        unknown_list = "".join(f"<li>{html_text(u)}</li>" for u in draft.unknowns)
+        case_id = html_text(data.target_transaction_id)
+        origin = " · 예시 탐지 결과" if result_source(detection.model_version) == "mock" else ""
+        return f"""<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>의심거래보고서 초안 · {case_id}</title><style>{REPORT_CSS}</style></head>
+<body><main><header><p class="meta">대상 거래 {case_id}{origin}</p><h1>의심거래보고서 초안</h1><dl>{cards}</dl></header>
+<h2>관찰 패턴</h2><p>제공된 거래 목록을 기준으로 계산했습니다.</p>{facts_table}
+<h2>검토 소견</h2>{''.join(paragraphs)}
+<h2>미확인 사항</h2><ul>{unknown_list}</ul>
+<h2>증빙 거래</h2>{evidence}
+<h2>분석 범위 및 탐지 정보</h2>{details}<ul>{warning_list}</ul>
+</main></body></html>"""
+    overview = table(["항목", "내용"], overview_rows)
+    overview += "\n\n입력 범위 및 처리 안내:\n" + "\n".join("- " + escape(w) for w in warnings)
     return Template(REPORT_TEMPLATE).substitute(
-        overview=overview, facts_table=table(["관찰 항목", "계산 결과", "근거 거래"], fact_rows),
+        overview=overview, facts_table=facts_table,
         opinion="\n\n".join(paragraphs), unknowns="\n".join("- " + escape(u) for u in draft.unknowns),
         evidence_table=evidence)
 
@@ -505,6 +567,7 @@ class ReportState(TypedDict, total=False):
     status: str
     verification_passed: bool
     final_report_md: str | None
+    final_report_html: str | None
 
 
 def build_report_graph(writer, max_rewrites=0):
@@ -529,7 +592,8 @@ def build_report_graph(writer, max_rewrites=0):
                 "trace": state["trace"] + ["write_opinion"]}
 
     def verify_node(state):
-        # 3. 원본과 대조하고, 통과하면 고정 Markdown 양식에 결과를 배치한다.
+        # 3. 검증을 통과한 동일한 초안으로 화면용 HTML과 평가용 텍스트를 만든다.
+        report_html = None
         data = ReportInput.model_validate(state["input_data"])
         if state["generation_error"]:
             errors = ["소견 생성 또는 출력 형식 검증 실패. 모델 설정·인증·연결 상태를 확인하세요."]
@@ -538,9 +602,11 @@ def build_report_graph(writer, max_rewrites=0):
             draft = OpinionDraft.model_validate(state["draft"])
             errors = verify_draft(data, state["facts"], draft)
             report = None if errors else render_report(data, state["facts"], draft)
+            if not errors:
+                report_html = render_report(data, state["facts"], draft, as_html=True)
         return {"errors": errors, "verification_passed": not errors,
                 "status": "needs_review" if errors else "validated_draft",
-                "final_report_md": report, "trace": state["trace"] + ["verify_report"]}
+                "final_report_md": report, "final_report_html": report_html, "trace": state["trace"] + ["verify_report"]}
 
     def route(state):
         if state["errors"] and state["attempts"] <= max_rewrites:
@@ -577,14 +643,14 @@ def generate_report(input_data, *, writer, max_rewrites=0, mode="llm"):
             "human_review_required": True,
             "semantic_review_status": "not_evaluated",
             "verification_scope": "structured_values_evidence_links_and_literal_digits_only",
-            **{k: result[k] for k in ["status", "verification_passed", "errors", "attempts", "trace", "facts", "draft", "final_report_md"]}}
+            **{k: result[k] for k in ["status", "verification_passed", "errors", "attempts", "trace", "facts", "draft", "final_report_md", "final_report_html"]}}
 
 # 8. 대시보드가 호출하는 함수
 
 def generate_str_report(
     payload: dict, *, model_name: str = DEFAULT_MODEL, max_rewrites: int = 0
 ) -> dict:
-    """팀 공통 JSON → 검증 결과, warnings와 final_report_md. 네트워크 데이터 조회는 호출자 담당.
+    """팀 공통 JSON → 검증 결과, warnings와 final_report_html. 네트워크 데이터 조회는 호출자 담당.
 
     입력 오류는 Pydantic ValidationError, 키/모델 초기화 오류는 예외로 반환한다.
     생성 또는 검증 실패 시 final_report_md=None과 errors 목록을 반환한다.
@@ -608,7 +674,7 @@ def generate_str_report(
 # 9. 터미널에서 단독 실행 (import할 때는 실행되지 않음)
 
 def main():
-    parser = argparse.ArgumentParser(description="거래 JSON으로 STR Markdown 초안을 생성합니다.")
+    parser = argparse.ArgumentParser(description="거래 JSON으로 STR HTML 초안을 생성합니다.")
     parser.add_argument("--input", type=Path, default=ROOT / "input_example.json")
     parser.add_argument("--output", type=Path, default=ROOT / "outputs")
     parser.add_argument("--model", default=DEFAULT_MODEL)
@@ -635,9 +701,11 @@ def main():
     run_dir = args.output / uuid4().hex[:12]
     run_dir.mkdir(parents=True)
     (run_dir / "result.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-    if result["final_report_md"]:
-        (run_dir / "str_report.md").write_text(result["final_report_md"], encoding="utf-8")
-    print(json.dumps({"status": result["status"], "output": str(run_dir.resolve())}, ensure_ascii=False))
+    report_path = run_dir / "str_report.html"
+    if result["final_report_html"]:
+        report_path.write_text(result["final_report_html"], encoding="utf-8")
+    print(json.dumps({"status": result["status"], "output": str(run_dir.resolve()),
+                      "html": str(report_path.resolve()) if result["final_report_html"] else None}, ensure_ascii=False))
     for error in result["errors"]:
         print(error)
     raise SystemExit(0 if result["verification_passed"] else 2)
