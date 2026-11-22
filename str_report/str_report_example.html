@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>의심거래보고서 초안 · TX000003</title><style>
+*{box-sizing:border-box}body{margin:0;background:#edf2f4;color:#182f38;font:16px/1.6 system-ui,'Malgun Gothic',sans-serif}
+main{max-width:960px;margin:32px auto;background:white;padding:clamp(20px,5vw,54px);border-top:6px solid #11665e}
+h1{font-size:clamp(26px,4vw,39px);line-height:1.22;margin:8px 0 18px;letter-spacing:-.045em}
+h2{font-size:21px;border-bottom:1px solid #b8ccca;padding-bottom:7px;margin:32px 0 12px}
+h3{font-size:16px;margin:18px 0 4px}p{margin:4px 0 9px}main{overflow-wrap:anywhere}
+.meta,small{color:#466269}.meta{margin:0;font-weight:650}
+dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+dl div{background:#f0f6f5;padding:12px 14px;border-left:3px solid #3b8b80}
+dt,small,th{font-size:14px}dd{margin:3px 0 0;font-size:18px;font-weight:650}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px;border-bottom:1px solid #d9e3e4;vertical-align:top}
+th{background:#f2f6f6;color:#34595a}.table-wrap{overflow-x:auto}
+ul{padding-left:22px}li{margin:5px 0}.observation{border-left:2px solid #b8ccca;padding-left:12px;margin:10px 0}
+@media(max-width:600px){main{margin:0}th,td{padding:5px}.table-wrap table{min-width:400px}}
+@page{size:A4;margin:15mm}@media print{body{background:white;font-size:10pt}main{margin:0;padding:0;max-width:none}
+h2,h3{break-after:avoid}tr,.observation{break-inside:avoid}.table-wrap{overflow:visible}table{font-size:9pt}thead{display:table-header-group}}
+</style></head>
+<body><main><header><p class="meta">대상 거래 TX000003 · 예시 탐지 결과</p><h1>의심거래보고서 초안</h1><dl><div><dt>송신 → 수신</dt><dd>B → D</dd></div><div><dt>대상 거래 금액</dt><dd>2,800 USD</dd></div><div><dt>GNN 의심 점수</dt><dd>0.81</dd></div></dl></header>
+<h2>관찰 패턴</h2><p>제공된 거래 목록을 기준으로 계산했습니다.</p><div class="table-wrap"><table><thead><tr><th scope="col">관찰 항목</th><th scope="col">계산 결과</th><th scope="col">근거 거래</th></tr></thead><tbody><tr><td>대상 송금 이전 관련 입금 횟수</td><td>2 건</td><td>TX000001, TX000002</td></tr><tr><td>대상 송금 이전 입금 상대 계좌 수</td><td>2 개</td><td>TX000001, TX000002</td></tr><tr><td>관련 유입 거래 기재 금액 합계 (USD)</td><td>3,000 USD</td><td>TX000001, TX000002</td></tr><tr><td>마지막 관련 입금부터 대상 송금까지</td><td>240.0 초</td><td>TX000002, TX000003</td></tr></tbody></table></div>
+<h2>검토 소견</h2><div class="observation"><h3>관찰 사실</h3><p>대상 거래는 B에서 D로 이루어진 송금이며, 금액은 2,800 USD이다.</p><small>근거 거래 · TX000003</small></div><div class="observation"><h3>관찰 사실</h3><p>대상 송금 직전에는 2 건의 관련 입금이 있었고, 유입 상대 계좌는 2 개이며, 관련 유입 거래의 기재 금액 합계는 3,000 USD이다.</p><small>근거 거래 · TX000001, TX000002</small></div><div class="observation"><h3>관찰 사실</h3><p>마지막 관련 입금과 대상 송금 사이의 간격은 240.0 초이다.</p><small>근거 거래 · TX000002, TX000003</small></div><div class="observation"><h3>추가 검토 사유</h3><p>대상 계좌로의 유입이 짧은 시간에 이어진 뒤 송금이 발생했으므로, 제공된 거래만으로는 자금의 성격이나 거래 목적을 확인하기 어렵다. 정상 정산이나 단순 자금 이동과 같은 다른 설명이 있을 수 있으나, 이를 뒷받침하는 증빙은 제공되지 않았다.</p><small>근거 거래 · TX000001, TX000002, TX000003</small></div><div class="observation"><h3>추가 검토 사유</h3><p>관련 입금의 실제 수취액, 입금 사유, 계좌 소유 관계, 거래 상대방과의 관계를 확인하지 못해 자금 흐름의 배경을 판단하기 어렵다. 추가로 거래 메모, 계약서, 정산 자료, 계좌 명의 확인 자료가 필요하다.</p><small>근거 거래 · TX000001, TX000002, TX000003</small></div><h3>모델 설명 근거</h3><p>예시 XAI 결과(Mock) / 방법: GNNExplainer / 설명 ID: EXP000003 / 모델 버전: fraudgt-mock-v1</p>
+
+<div class="table-wrap"><table><thead><tr><th scope="col">거래 ID</th><th scope="col">중요도</th></tr></thead><tbody><tr><td>TX000001</td><td>0.75</td></tr><tr><td>TX000002</td><td>0.86</td></tr></tbody></table></div>
+
+중요도는 제공된 모델 설명 값이며, 범죄 확률이나 연결 제거에 따른 점수 변화가 아니다.<h3>유형 분석 참고 정보</h3><div class="table-wrap"><table><thead><tr><th scope="col">항목</th><th scope="col">제공된 값</th></tr></thead><tbody><tr><td>후보 유형</td><td>Layering</td></tr><tr><td>모듈 신뢰도 값</td><td>0.72</td></tr><tr><td>검증 상태</td><td>unverified</td></tr><tr><td>모델 버전</td><td>typology-mock-v1</td></tr><tr><td>출처</td><td>예시(Mock)</td></tr><tr><td>관련 거래</td><td>TX000001, TX000002, TX000003</td></tr></tbody></table></div>
+
+유형 분석 모듈이 제공한 후보 정보와 검증 상태를 그대로 표시하였다. 이 보고서가 해당 유형을 독립적으로 검증한 것은 아니다.
+<h2>미확인 사항</h2><ul><li>관련 입금의 실제 성격을 확인할 수 있는 입금 사유 또는 거래 메모</li><li>대상 계좌와 관련 입금 계좌들 사이의 관계를 확인할 수 있는 명의 및 거래 관계 증빙</li><li>대상 송금의 목적을 확인할 수 있는 계약서, 정산 내역, 청구서 등 증빙</li></ul>
+<h2>증빙 거래</h2><div class="table-wrap"><table><thead><tr><th scope="col">거래 ID</th><th scope="col">송신</th><th scope="col">수신</th><th scope="col">시각</th><th scope="col">거래 금액·통화</th><th scope="col">대상 여부</th></tr></thead><tbody><tr><td>TX000001</td><td>A</td><td>B</td><td>2022-11-01 10:01:00+00:00</td><td>1,000 USD</td><td>관련</td></tr><tr><td>TX000002</td><td>C</td><td>B</td><td>2022-11-01 10:03:00+00:00</td><td>2,000 USD</td><td>관련</td></tr><tr><td>TX000003</td><td>B</td><td>D</td><td>2022-11-01 10:07:00+00:00</td><td>2,800 USD</td><td>대상</td></tr></tbody></table></div>
+<h2>분석 범위 및 탐지 정보</h2><div class="table-wrap"><table><thead><tr><th scope="col">항목</th><th scope="col">내용</th></tr></thead><tbody><tr><td>거래 시각</td><td>2022-11-01 10:07:00+00:00</td></tr><tr><td>알럿 여부</td><td>대상</td></tr><tr><td>탐지 모델 버전</td><td>fraudgt-mock-v1</td></tr><tr><td>탐지 결과 출처</td><td>예시(Mock)</td></tr><tr><td>제공된 거래 수</td><td>3건</td></tr><tr><td>제공 거래의 최초·최종 시각</td><td>2022-11-01 10:01:00+00:00 ~ 2022-11-01 10:07:00+00:00</td></tr><tr><td>주변 거래 조회 설정</td><td>2홉 / lookback_days=7 (전체 거래 포함을 보장하지 않음)</td></tr></tbody></table></div><ul><li>amount/currency는 API 기재 거래 금액이며, 실제 수취액·환전액은 별도로 확인하지 않았습니다.</li><li>조회 시작·종료 시각이 없어 lookback_days로 분석 기간을 추정하지 않았습니다.</li><li>주변 거래의 생략 여부가 제공되지 않았습니다. 집계는 제공된 거래 목록에 한정합니다.</li><li>탐지 모델 버전에 mock 표시가 있어 예시 탐지 결과로 표시합니다.</li><li>유형 분석은 검증 완료 상태가 아니므로 후보 정보로만 표시합니다.</li></ul>
+</main></body></html>
