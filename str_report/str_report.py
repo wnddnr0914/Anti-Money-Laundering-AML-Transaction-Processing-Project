@@ -38,7 +38,7 @@ from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, ValidationError, model_validator
 
 ROOT = Path(__file__).resolve().parent
-DEFAULT_MODEL = "gpt-5.4-mini"
+DEFAULT_MODEL = "gpt-6.2-astra"
 TOKEN = re.compile(r"\{\{([a-zA-Z0-9_]+)\}\}")
 
 REPORT_TEMPLATE = """# 의심거래보고서(STR) 초안
